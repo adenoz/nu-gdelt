@@ -1,3 +1,3 @@
-# GDELT
+# GDELT with Nushell
 
 TODO
