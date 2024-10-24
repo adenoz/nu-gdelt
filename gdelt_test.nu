@@ -21,18 +21,30 @@
 #=============================================================
 
 let TIME_START = date now
+let URL = "http://data.gdeltproject.org/gdeltv2/lastupdate.txt"
 
 # This function extracts the unique identifier 
 # from the GDELT lastupdate .txt file. The exports file.
 def get_identifier [url] {
-  http get $url |
-  lines |
-  first |
-  split row " " |
-  last |
-  split words |
-  first 6 |
-  last
+  let status = http get -fe $url | get status
+  match $status {
+    200 => (http get $url |
+           lines |
+           first |
+           split row " " |
+           last |
+           split words |
+           first 6 |
+           last)
+    3.. => (print "Got a 3** status code attempting to get identifier, trying again in 1min" |
+            sleep 1min | get_identifier $url)
+    4.. => (print "Got a 4** status code attempting to get identifier, trying again in 1min" |
+            sleep 1min | get_identifier $url)
+    5.. => (print "Got a 5** status code attempting to get identifier, trying again in 1min" |
+            sleep 1min | get_identifier $url)  
+    _ => (print "Got a weird response for a status code attempting to get identifier,
+          trying again in 1min" | sleep 1min | get_identifier $url)
+  }
 }
 
 def get_year [url] {
@@ -64,31 +76,39 @@ def get_data [url]: any -> int {
   mut fetch_attempts = 0
   let status = http get -fe $url | get status
   match $status {
-  200 => (downloader $url)
-  _ => (if true {$fetch_attempts += 1} |
-      match $fetch_attempts {
-        1 => (print "First attempt to get 200 response code failed, trying again in 1min..." | sleep 1min | downloader $url)
-        2 => (print "Failed to get 200 response code again, trying again in 2mins..." | 
-        sleep 2min | downloader $url)
-        3 => (print "Failed to get 200 response code for third time, will try once more after 3mins..." | sleep 3min | downloader $url)
-        _ => (print "Failed to get 200 response code after numerous attempts, so exiting task" | exit)
-      })
+    200 => (downloader $url)
+    3.. => (print "Got a 3** status code, will try again in 1min" |
+            sleep 1min | get_data $url)
+    4.. => (print "Got a 4** status code, will try again in 1min" |
+            sleep 1min | get_data $url)
+    5.. => (print "Got a 5** status code, will try again in 1min" |
+            sleep 1min | get_data $url)    
+    _ => (if true {$fetch_attempts += 1} |
+        match $fetch_attempts {
+          1 => (print "Got an unusual http response code, trying again in 1min..." | sleep 1min | get_data $url)
+          2 => (print "Got another unusual http response code, trying again in 2mins..." | 
+          sleep 2min | get_data $url)
+          3 => (print "Got an unusual http response code for third time, will try once more after 3mins..." | sleep 3min | get_data $url)
+          _ => (print "Failed to get 200 response code after numerous attempts, so exiting task" | exit)
+        })
   }
 }
 
 # This function downloads the most recent gdelt data
 # and saves it in bronze storage as zipped csv, as per source
-# add a try catch to the http get section
 def downloader [url] {
-  let identifier = get_identifier $url
-  let year = get_year $url
-  let month = get_month $url
-  http get (http get $url |
-  lines |
-  first |
-  split row " " |
-  last) |
-  save $"bronze/($year)/($month)/($identifier).csv.zip" -f
+  try {
+    let identifier = get_identifier $url
+    let year = get_year $url
+    let month = get_month $url
+    http get (http get $url |
+    lines |
+    first |
+    split row " " |
+    last) |
+    save $"bronze/($year)/($month)/($identifier).csv.zip" -f
+    } catch { print "Failed to download zipped csv, will try again in 1min" |
+      sleep 1min | downloader $url}
 }
 
 def unzipper [url] {
@@ -217,7 +237,6 @@ def finish_up [] {
 }
 
 def main [] {
-  let URL = "http://data.gdeltproject.org/gdeltv2/lastupdate.txt"
   print "Starting to grab most recent GDELT data..."
   set_dirs $URL
   get_data $URL
