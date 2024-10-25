@@ -67,8 +67,8 @@ def set_dirs [url] {
   if (is-not-empty $"bronze/($year)/($month)") == false {mkdir $"bronze/($year)/($month)"} 
   if (is-not-empty $"silver/($year)") == false {mkdir $"silver/($year)"}
   if (is-not-empty $"silver/($year)/($month)") == false {mkdir $"silver/($year)/($month)"} 
-  if (is-not-empty $"gold/($year)") == false {mkdir $"gold/($year)"}
-  if (is-not-empty $"gold/($year)/($month)") == false {mkdir $"gold/($year)/($month)"} 
+  # if (is-not-empty $"gold/($year)") == false {mkdir $"gold/($year)"}
+  # if (is-not-empty $"gold/($year)/($month)") == false {mkdir $"gold/($year)/($month)"} 
 }
 
 # Fetch http status code from a given URL, then request download if 200
