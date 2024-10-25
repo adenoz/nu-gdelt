@@ -22,7 +22,6 @@ As your data grows, it stays organised and in a form that is efficient and easy 
 
 The final parquet files have the following schema. This schema closely matches that of the GDELT source, as per the [documentation](http://data.gdeltproject.org/documentation/GDELT-Event_Codebook-V2.0.pdf).
 
-|--------------------------------------------------------------------|
 |      column_name      | column_type | null | key | default | extra |
 |-----------------------|-------------|------|-----|---------|-------|
 | GlobalEventID         | INTEGER     | YES  |     |         |       |
@@ -86,7 +85,6 @@ The final parquet files have the following schema. This schema closely matches t
 | ActionGeo_FeatureID   | VARCHAR     | YES  |     |         |       |
 | DATEADDED             | BIGINT      | YES  |     |         |       |
 | SOURCEURL             | VARCHAR     | YES  |     |         |       |
-|--------------------------------------------------------------------|
 
 ## Logging
 
