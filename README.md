@@ -88,6 +88,28 @@ The final parquet files have the following schema. This schema closely matches t
 | SOURCEURL             | VARCHAR     | YES  |     |         |       |
 |--------------------------------------------------------------------|
 
+## Logging
+
+`nu-gdelt` also produces and saves logs into a custom log file called `gdelt.log`. The format for logs is simply `Datetime`, `Severtity` and `Message`. The log file has been formatted in such a way to make it easy to read. Additionally, because we are using `nushell`, we can very easily navigate and filter our logs using the following command:
+
+```shell
+open gdelt.log | lines | split column " - " | rename "Datetime" "Severity" "Message" | into value
+```
+
+This command will provide a table of log data that can be filtered and sorted, including by time as the `Datetime` data is read in as an actual date date type.
+
+If you want to observe the logs as the program is running, you can run the following:
+
+```shell
+tail -f gdelt.log
+```
+
+`CTRL+C` to exit tailing.
+
+Future iterations of the logging functionality will include auto-rotating of logs, archiving and compression etc.
+
+--
+
 This repo is under active development.
 
 

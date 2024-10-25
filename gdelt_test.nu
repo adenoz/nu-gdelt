@@ -20,15 +20,25 @@
 #
 #=============================================================
 
+def logger [importance message] {
+  let date = date now | format date "%Y-%m-%d %H:%M:%S"
+  let logger = $"($date) - ($importance) - ($message)\n"
+  $logger | save --append gdelt.log
+}
+
+# logger "INFO" "Testing logging"
+
 let TIME_START = date now
 let URL = "http://data.gdeltproject.org/gdeltv2/lastupdate.txt"
 
 # This function extracts the unique identifier 
 # from the GDELT lastupdate .txt file. The exports file.
 def get_identifier [url] {
+  # logger "INFO" "Starting to grab unique identifer"
   let status = http get -fe $url | get status
   match $status {
-    200 => (http get $url |
+    200 => (# logger "INFO" "Got 200 code! Grabbing identifier" |
+           http get $url |
            lines |
            first |
            split row " " |
@@ -36,13 +46,13 @@ def get_identifier [url] {
            split words |
            first 6 |
            last)
-    3.. => (print "Got a 3** status code attempting to get identifier, trying again in 1min" |
+    3.. => (logger "WARNING " "Got a 3** status code attempting to get identifier, trying again in 1min" |
             sleep 1min | get_identifier $url)
-    4.. => (print "Got a 4** status code attempting to get identifier, trying again in 1min" |
+    4.. => (logger "WARNING" "Got a 4** status code attempting to get identifier, trying again in 1min" |
             sleep 1min | get_identifier $url)
-    5.. => (print "Got a 5** status code attempting to get identifier, trying again in 1min" |
+    5.. => (logger "WARNING" "Got a 5** status code attempting to get identifier, trying again in 1min" |
             sleep 1min | get_identifier $url)  
-    _ => (print "Got a weird response for a status code attempting to get identifier,
+    _ => (logger "WARNING" "Got a weird response for a status code attempting to get identifier,
           trying again in 1min" | sleep 1min | get_identifier $url)
   }
 }
@@ -61,6 +71,7 @@ def get_month [url] {
 
 # Capture year and month from file name, and mkdirs
 def set_dirs [url] {
+  logger "INFO" "Setting directories"
   let year = get_year $url
   let month = get_month $url
   if (is-not-empty $"bronze/($year)") == false {mkdir $"bronze/($year)"}
@@ -69,6 +80,7 @@ def set_dirs [url] {
   if (is-not-empty $"silver/($year)/($month)") == false {mkdir $"silver/($year)/($month)"} 
   # if (is-not-empty $"gold/($year)") == false {mkdir $"gold/($year)"}
   # if (is-not-empty $"gold/($year)/($month)") == false {mkdir $"gold/($year)/($month)"} 
+  logger "INFO" "Directories all set"
 }
 
 # Fetch http status code from a given URL, then request download if 200
@@ -76,27 +88,22 @@ def get_data [url]: any -> int {
   mut fetch_attempts = 0
   let status = http get -fe $url | get status
   match $status {
-    200 => (downloader $url)
-    3.. => (print "Got a 3** status code, will try again in 1min" |
+    200 => (logger "INFO" "Got a good 200 status code!" | downloader $url)
+    3.. => (logger "WARNING" "Got a 3** status code, will try again in 1min" |
             sleep 1min | get_data $url)
-    4.. => (print "Got a 4** status code, will try again in 1min" |
+    4.. => (logger "WARNING" "Got a 4** status code, will try again in 1min" |
             sleep 1min | get_data $url)
-    5.. => (print "Got a 5** status code, will try again in 1min" |
+    5.. => (logger "WARNING" "Got a 5** status code, will try again in 1min" |
             sleep 1min | get_data $url)    
-    _ => (if true {$fetch_attempts += 1} |
-        match $fetch_attempts {
-          1 => (print "Got an unusual http response code, trying again in 1min..." | sleep 1min | get_data $url)
-          2 => (print "Got another unusual http response code, trying again in 2mins..." | 
-          sleep 2min | get_data $url)
-          3 => (print "Got an unusual http response code for third time, will try once more after 3mins..." | sleep 3min | get_data $url)
-          _ => (print "Failed to get 200 response code after numerous attempts, so exiting task" | exit)
-        })
+    _ => (logger "WARNING" "Got a weird http response code, will try again in 1min" |
+          sleep 1min | get_date $url)
   }
 }
 
 # This function downloads the most recent gdelt data
 # and saves it in bronze storage as zipped csv, as per source
 def downloader [url] {
+  logger "INFO" "Starting download attempt..."
   try {
     let identifier = get_identifier $url
     let year = get_year $url
@@ -106,24 +113,26 @@ def downloader [url] {
     first |
     split row " " |
     last) |
-    save $"bronze/($year)/($month)/($identifier).csv.zip" -f
-    } catch { print "Failed to download zipped csv, will try again in 1min" |
+    save $"bronze/($year)/($month)/($identifier).csv.zip" -f |
+    logger "INFO" "Downloading of the data seems complete!"
+    } catch { logger "WARNING" "Failed to download zipped csv, will try again in 1min" |
       sleep 1min | downloader $url}
 }
 
 def unzipper [url] {
+  logger "INFO" "Starting to try to unzip"
   let identifier = get_identifier $url
   let year = get_year $url
   let month = get_month $url
   unzip $"bronze/($year)/($month)/($identifier).csv.zip" -d temp_data/ |
   sleep 2sec | # this is to allow time for unzipping
-  (print "Compressed data has been grabbed and unzipped.")
+  (logger "INFO" "Compressed data has been grabbed and unzipped.")
 }
 
 # Convert CSV to Parquet format
 # Rename columns and set data types
 def duck_parquet [url] {
-  let identifier = get_identifier $url
+  logger "INFO" "Starting to get ducky with it."
   try {
     duckdb -c "COPY (SELECT * FROM read_csv('temp_data/*.export.CSV', columns={
      'GlobalEventID': 'INTEGER',
@@ -188,8 +197,8 @@ def duck_parquet [url] {
      'DATEADDED': 'BIGINT',
      'SOURCEURL': 'VARCHAR'
     })) TO 'temp_data/temp.parquet' (FORMAT 'parquet');"
-    print "Data appears to have been successfully saved in temp loc, validating..."
-  } catch { |err| $err.msg }
+    logger "INFO" "Data appears to have been successfully saved in temp loc, validating..."
+  } catch { |err| $err.msg | logger "ERROR" "Failed to cast and save to parquet!"}
 }
 
 # Determine if a parquet file was saved where expected
@@ -199,20 +208,21 @@ def valid_parquet [url] {
   let pval = ls temp_data/ | get name | find parquet
   let ptest = $pval | is-not-empty
   match $ptest {
-    true => (print "Parquet successfully saved in temp directory.")
-    false => (print "Data was NOT saved as temp Parquet file, trying again..." | duck_parquet $url)
-    _ => (print "Something weird happened! Couldn't understand if temp Parquet file saved.")
+    true => (logger "INFO" "Parquet successfully saved in temp directory.")
+    false => (logger "WARNING" "Data was NOT saved as temp Parquet file, trying again..." | duck_parquet $url)
+    _ => (logger "ERROR" "Something weird happened! Couldn't understand if temp Parquet file saved.")
   }
 }
 
 # Move and rename parquet to appropriate directory in monthly silver partition
 def move_rename_parquet [url] {
+  logger "INFO" "Moving and renaming parquet"
   try {
     let year = get_year $url
     let month = get_month $url
     let index = get_identifier $url
     mv temp_data/temp.parquet $"silver/($year)/($month)/($index).parquet"
-  } catch { print "Transerring parquet to partitioned dir failed" }
+  } catch { logger "ERROR" "Transerring parquet to partitioned dir failed" }
 }
 
 # Checking if parquet can be found where it is supposed to be
@@ -222,9 +232,9 @@ def confirm_parquet [url] {
   let index = get_identifier $url
   let confirm = ls $"silver/($year)/($month)" | find $"($index).parquet" | is-not-empty
   match $confirm {
-    true => (print "Parquet file successfully saved in expected Silver dir!" |
+    true => (logger "INFO" "Parquet file successfully saved in expected Silver dir!" |
             rm $"temp_data/($index).export.CSV") 
-    false => (print "Parquet file NOT detected in correct final dir!")
+    false => (logger "ERROR" "Parquet file NOT detected in correct final dir!")
   }
 }
 
@@ -233,18 +243,16 @@ def finish_up [] {
   let time_finished = date now
   let duration = $time_finished - $TIME_START
   let secs = $duration | into string | split row " " | first
-  print $"Task took ($secs) seconds, and is now complete."
+  logger "INFO" $"Task took ($secs) seconds, and is now complete."
 }
 
 def main [] {
-  print "Starting to grab most recent GDELT data..."
+  logger "INFO" "Starting to grab most recent GDELT data..."
   set_dirs $URL
   get_data $URL
   unzipper $URL
-  print "Ducking around and saving as Parquet..."
   duck_parquet $URL
   valid_parquet $URL
-  print "Finishing some final clean up, like renaming and moving file to partitioned dir..."
   move_rename_parquet $URL
   confirm_parquet $URL
   finish_up
