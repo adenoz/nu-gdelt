@@ -53,3 +53,17 @@
 2024-10-25 19:28:01 - INFO - Moving and renaming parquet
 2024-10-25 19:28:06 - INFO - Parquet file successfully saved in expected Silver dir!
 2024-10-25 19:28:06 - INFO - Task took 16sec seconds, and is now complete.
+2024-10-26 19:39:16 - INFO - Starting to grab most recent GDELT data...
+2024-10-26 19:39:16 - INFO - Setting directories
+2024-10-26 19:39:17 - INFO - Directories all set
+2024-10-26 19:39:17 - INFO - Got a good 200 status code!
+2024-10-26 19:39:17 - INFO - Starting download attempt...
+2024-10-26 19:39:20 - INFO - Downloading of the data seems complete!
+2024-10-26 19:39:20 - INFO - Starting to try to unzip
+2024-10-26 19:39:24 - INFO - Compressed data has been grabbed and unzipped.
+2024-10-26 19:39:24 - INFO - Starting to get ducky with it.
+2024-10-26 19:39:24 - INFO - Data appears to have been successfully saved in temp loc, validating...
+2024-10-26 19:39:24 - INFO - Parquet successfully saved in temp directory.
+2024-10-26 19:39:24 - INFO - Moving and renaming parquet
+2024-10-26 19:39:27 - INFO - Parquet file successfully saved in expected Silver dir!
+2024-10-26 19:39:27 - INFO - Task took 11sec seconds, and is now complete.
