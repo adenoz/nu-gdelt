@@ -146,7 +146,7 @@ The final parquet files have the following schema. This schema closely matches t
 | Actor2Geo_ADM1Code    | VARCHAR     | YES  |
 | Actor2Geo_ADM2Code    | VARCHAR     | YES  |
 | Actor2Geo_Lat         | FLOAT       | YES  |
-|Actor2Geo_Long         | FLOAT       | YES  |
+| Actor2Geo_Long        | FLOAT       | YES  |
 | Actor2Geo_FeatureID   | VARCHAR     | YES  |
 | ActionGeo_Type        | INTEGER     | YES  |
 | ActionGeo_FullName    | VARCHAR     | YES  |
