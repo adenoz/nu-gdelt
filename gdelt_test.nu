@@ -191,8 +191,8 @@ def duck_parquet [url] {
      'ActionGeo_CountryCode': 'VARCHAR',
      'ActionGeo_ADM1Code': 'VARCHAR',
      'ActionGeo_ADM2Code': 'VARCHAR',
-     'ActionGeo_Lat': 'INTEGER',
-     'ActionGeo_Long': 'INTEGER',
+     'ActionGeo_Lat': 'FLOAT',
+     'ActionGeo_Long': 'FLOAT',
      'ActionGeo_FeatureID': 'VARCHAR',
      'DATEADDED': 'BIGINT',
      'SOURCEURL': 'VARCHAR'
