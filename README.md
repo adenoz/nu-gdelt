@@ -29,71 +29,6 @@ As your data grows, it stays organised and in a form that is efficient and easy 
 
 The final parquet files have the following schema. This schema closely matches that of the GDELT source, as per the [documentation](http://data.gdeltproject.org/documentation/GDELT-Event_Codebook-V2.0.pdf).
 
-<<<<<<< HEAD
-|      column_name      | column_type | null | key | default | extra |
-|-----------------------|-------------|------|-----|---------|-------|
-| GlobalEventID         | INTEGER     | YES  |     |         |       |
-| Day                   | INTEGER     | YES  |     |         |       |
-| MonthYear             | INTEGER     | YES  |     |         |       |
-| Year                  | INTEGER     | YES  |     |         |       |
-| FractionDate          | FLOAT       | YES  |     |         |       |
-| Actor1Code            | VARCHAR     | YES  |     |         |       |
-| Actor1Name            | VARCHAR     | YES  |     |         |       |
-| Actor1CountryCode     | VARCHAR     | YES  |     |         |       |
-| Actor1KnownGroupCode  | VARCHAR     | YES  |     |         |       |
-| Actor1EthnicCode      | VARCHAR     | YES  |     |         |       |
-| Actor1Religion1Code   | VARCHAR     | YES  |     |         |       |
-| Actor1Religion2Code   | VARCHAR     | YES  |     |         |       |
-| Actor1Type1Code       | VARCHAR     | YES  |     |         |       |
-| Actor1Type2Code       | VARCHAR     | YES  |     |         |       |
-| Actor1Type3Code       | VARCHAR     | YES  |     |         |       |
-| Actor2Code            | VARCHAR     | YES  |     |         |       |
-| Actor2Name            | VARCHAR     | YES  |     |         |       |
-| Actor2CountryCode     | VARCHAR     | YES  |     |         |       |
-| Actor2KnownGroupCode  | VARCHAR     | YES  |     |         |       |
-| Actor2EthnicCode      | VARCHAR     | YES  |     |         |       |
-| Actor2Religion1Code   | VARCHAR     | YES  |     |         |       |
-| Actor2Religion2Code   | VARCHAR     | YES  |     |         |       |
-| Actor2Type1Code       | VARCHAR     | YES  |     |         |       |
-| Actor2Type2Code       | VARCHAR     | YES  |     |         |       |
-| Actor2Type3Code       | VARCHAR     | YES  |     |         |       |
-| IsRootEvent           | INTEGER     | YES  |     |         |       |
-| EventCode             | VARCHAR     | YES  |     |         |       |
-| EventBaseCode         | VARCHAR     | YES  |     |         |       |
-| EventRootCode         | VARCHAR     | YES  |     |         |       |
-| QuadClass             | INTEGER     | YES  |     |         |       |
-| GoldsteinScale        | FLOAT       | YES  |     |         |       |
-| NumMentions           | INTEGER     | YES  |     |         |       |
-| NumSources            | INTEGER     | YES  |     |         |       |
-| NumArticles           | INTEGER     | YES  |     |         |       |
-| AvgTone               | FLOAT       | YES  |     |         |       |
-| Actor1Geo_Type        | INTEGER     | YES  |     |         |       |
-| Actor1Geo_FullName    | VARCHAR     | YES  |     |         |       |
-| Actor1Geo_CountryCode | VARCHAR     | YES  |     |         |       |
-| Actor1Geo_ADM1Code    | VARCHAR     | YES  |     |         |       |
-| Actor1Geo_ADM2Code    | VARCHAR     | YES  |     |         |       |
-| Actor1Geo_Lat         | FLOAT       | YES  |     |         |       |
-| Actor1Geo_Long        | FLOAT       | YES  |     |         |       |
-| Actor1Geo_FeatureID   | VARCHAR     | YES  |     |         |       |
-| Actor2Geo_Type        | INTEGER     | YES  |     |         |       |
-| Actor2Geo_FullName    | VARCHAR     | YES  |     |         |       |
-| Actor2Geo_CountryCode | VARCHAR     | YES  |     |         |       |
-| Actor2Geo_ADM1Code    | VARCHAR     | YES  |     |         |       |
-| Actor2Geo_ADM2Code    | VARCHAR     | YES  |     |         |       |
-| Actor2Geo_Lat         | FLOAT       | YES  |     |         |       |
-| Actor2Geo_Long        | FLOAT       | YES  |     |         |       |
-| Actor2Geo_FeatureID   | VARCHAR     | YES  |     |         |       |
-| ActionGeo_Type        | INTEGER     | YES  |     |         |       |
-| ActionGeo_FullName    | VARCHAR     | YES  |     |         |       |
-| ActionGeo_CountryCode | VARCHAR     | YES  |     |         |       |
-| ActionGeo_ADM1Code    | VARCHAR     | YES  |     |         |       |
-| ActionGeo_ADM2Code    | VARCHAR     | YES  |     |         |       |
-| ActionGeo_Lat         | INTEGER     | YES  |     |         |       |
-| ActionGeo_Long        | INTEGER     | YES  |     |         |       |
-| ActionGeo_FeatureID   | VARCHAR     | YES  |     |         |       |
-| DATEADDED             | BIGINT      | YES  |     |         |       |
-| SOURCEURL             | VARCHAR     | YES  |     |         |       |
-=======
 |--------------------------------------------|
 |      column_name      | column_type | null |
 |-----------------------|-------------|------|
@@ -159,7 +94,6 @@ The final parquet files have the following schema. This schema closely matches t
 | DATEADDED             | BIGINT      | YES  |
 | SOURCEURL             | VARCHAR     | YES  |
 |--------------------------------------------|
->>>>>>> dev
 
 ## Logging
 
