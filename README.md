@@ -87,8 +87,8 @@ The final parquet files have the following schema. This schema closely matches t
 | ActionGeo_CountryCode | VARCHAR     | YES      |
 | ActionGeo_ADM1Code    | VARCHAR     | YES      |
 | ActionGeo_ADM2Code    | VARCHAR     | YES      |
-| ActionGeo_Lat         | INTEGER     | YES      |
-| ActionGeo_Long        | INTEGER     | YES      |
+| ActionGeo_Lat         | FLOAT       | YES      |
+| ActionGeo_Long        | FLOAT       | YES      |
 | ActionGeo_FeatureID   | VARCHAR     | YES      |
 | DATEADDED             | BIGINT      | YES      |
 | SOURCEURL             | VARCHAR     | YES      |
