@@ -93,7 +93,6 @@ The final parquet files have the following schema. This schema closely matches t
 | ActionGeo_FeatureID   | VARCHAR     | YES  |
 | DATEADDED             | BIGINT      | YES  |
 | SOURCEURL             | VARCHAR     | YES  |
-|--------------------------------------------|
 
 ## Logging
 
