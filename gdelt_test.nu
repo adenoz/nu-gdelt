@@ -5,7 +5,7 @@
 # This script will download latest GDELT data
 # and save a zipped CSV in a Bronze directory
 # and a named and typed parquet file in a Silver directory
-# It expects `duckdb` to be installed, which it should be!
+# It expects `nushell` and `duckdb` to be installed.
 #
 # Designed to be run with cron job every 15mins
 # Source data is updated every 15mins
@@ -20,7 +20,7 @@
 #
 #=============================================================
 
-def logger [importance message] {
+def logger [importance message: string] {
   let date = date now | format date "%Y-%m-%d %H:%M:%S"
   let logger = $"($date) - ($importance) - ($message)\n"
   $logger | save --append gdelt.log
@@ -33,7 +33,7 @@ let URL = "http://data.gdeltproject.org/gdeltv2/lastupdate.txt"
 
 # This function extracts the unique identifier 
 # from the GDELT lastupdate .txt file. The exports file.
-def get_identifier [url] {
+def get_identifier [url: string] {
   # logger "INFO" "Starting to grab unique identifer"
   let status = http get -fe $url | get status
   match $status {
@@ -57,20 +57,20 @@ def get_identifier [url] {
   }
 }
 
-def get_year [url] {
+def get_year [url: string] {
   let index = get_identifier $url
   let year = $index | into string | str substring 0..3
   return $year
 }
 
-def get_month [url] {
+def get_month [url: string] {
   let index = get_identifier $url
   let month = $index | into string | str substring 4..5
   return $month
 }
 
 # Capture year and month from file name, and mkdirs
-def set_dirs [url] {
+def set_dirs [url: string] {
   logger "INFO" "Setting directories"
   let year = get_year $url
   let month = get_month $url
@@ -78,8 +78,6 @@ def set_dirs [url] {
   if (is-not-empty $"bronze/($year)/($month)") == false {mkdir $"bronze/($year)/($month)"} 
   if (is-not-empty $"silver/($year)") == false {mkdir $"silver/($year)"}
   if (is-not-empty $"silver/($year)/($month)") == false {mkdir $"silver/($year)/($month)"} 
-  # if (is-not-empty $"gold/($year)") == false {mkdir $"gold/($year)"}
-  # if (is-not-empty $"gold/($year)/($month)") == false {mkdir $"gold/($year)/($month)"} 
   logger "INFO" "Directories all set"
 }
 
@@ -102,7 +100,7 @@ def get_data [url]: any -> int {
 
 # This function downloads the most recent gdelt data
 # and saves it in bronze storage as zipped csv, as per source
-def downloader [url] {
+def downloader [url: string] {
   logger "INFO" "Starting download attempt..."
   try {
     let identifier = get_identifier $url
@@ -119,7 +117,7 @@ def downloader [url] {
       sleep 1min | downloader $url}
 }
 
-def unzipper [url] {
+def unzipper [url: string] {
   logger "INFO" "Starting to try to unzip"
   let identifier = get_identifier $url
   let year = get_year $url
@@ -131,80 +129,21 @@ def unzipper [url] {
 
 # Convert CSV to Parquet format
 # Rename columns and set data types
-def duck_parquet [url] {
-  logger "INFO" "Starting to get ducky with it."
+def duck_parquet [url: string] {
+  logger "INFO" "Grabbing specific CSV file from temp/."
+  let index = get_identifier $url
+  # Find and replace previous index with current in sql file
+  cat gdelt_query.sql | str replace --all --regex '[0-9]{12,16}' $index | save gdelt_query.sql -f
   try {
-    duckdb -c "COPY (SELECT * FROM read_csv('temp_data/*.export.CSV', columns={
-     'GlobalEventID': 'INTEGER',
-     'Day': 'INTEGER',
-     'MonthYear': 'INTEGER',
-     'Year': 'INTEGER',
-     'FractionDate': 'FLOAT',
-     'Actor1Code': 'VARCHAR',
-     'Actor1Name': 'VARCHAR',
-     'Actor1CountryCode': 'VARCHAR',
-     'Actor1KnownGroupCode': 'VARCHAR',
-     'Actor1EthnicCode': 'VARCHAR',
-     'Actor1Religion1Code': 'VARCHAR',
-     'Actor1Religion2Code': 'VARCHAR',
-     'Actor1Type1Code': 'VARCHAR',
-     'Actor1Type2Code': 'VARCHAR',
-     'Actor1Type3Code': 'VARCHAR',
-     'Actor2Code': 'VARCHAR',
-     'Actor2Name': 'VARCHAR',
-     'Actor2CountryCode': 'VARCHAR',
-     'Actor2KnownGroupCode': 'VARCHAR',
-     'Actor2EthnicCode': 'VARCHAR',
-     'Actor2Religion1Code': 'VARCHAR',
-     'Actor2Religion2Code': 'VARCHAR',
-     'Actor2Type1Code': 'VARCHAR',
-     'Actor2Type2Code': 'VARCHAR',
-     'Actor2Type3Code': 'VARCHAR',
-     'IsRootEvent': 'INTEGER',
-     'EventCode': 'VARCHAR',
-     'EventBaseCode': 'VARCHAR',
-     'EventRootCode': 'VARCHAR',
-     'QuadClass': 'INTEGER',
-     'GoldsteinScale': 'FLOAT',
-     'NumMentions': 'INTEGER',
-     'NumSources': 'INTEGER',
-     'NumArticles': 'INTEGER',
-     'AvgTone': 'FLOAT',
-     'Actor1Geo_Type': 'INTEGER',
-     'Actor1Geo_FullName': 'VARCHAR',
-     'Actor1Geo_CountryCode': 'VARCHAR',
-     'Actor1Geo_ADM1Code': 'VARCHAR',
-     'Actor1Geo_ADM2Code': 'VARCHAR',
-     'Actor1Geo_Lat': 'FLOAT',
-     'Actor1Geo_Long': 'FLOAT',
-     'Actor1Geo_FeatureID': 'VARCHAR',
-     'Actor2Geo_Type': 'INTEGER',
-     'Actor2Geo_FullName': 'VARCHAR',
-     'Actor2Geo_CountryCode': 'VARCHAR',
-     'Actor2Geo_ADM1Code': 'VARCHAR',
-     'Actor2Geo_ADM2Code': 'VARCHAR',
-     'Actor2Geo_Lat': 'FLOAT',
-     'Actor2Geo_Long': 'FLOAT',
-     'Actor2Geo_FeatureID': 'VARCHAR',
-     'ActionGeo_Type': 'INTEGER',
-     'ActionGeo_FullName': 'VARCHAR',
-     'ActionGeo_CountryCode': 'VARCHAR',
-     'ActionGeo_ADM1Code': 'VARCHAR',
-     'ActionGeo_ADM2Code': 'VARCHAR',
-     'ActionGeo_Lat': 'FLOAT',
-     'ActionGeo_Long': 'FLOAT',
-     'ActionGeo_FeatureID': 'VARCHAR',
-     'DATEADDED': 'BIGINT',
-     'SOURCEURL': 'VARCHAR'
-    })) TO 'temp_data/temp.parquet' (FORMAT 'parquet');"
-    logger "INFO" "Data appears to have been successfully saved in temp loc, validating..."
+    duckdb -c ".read gdelt_query.sql"
+    logger "INFO" "Data appears to have been successfully saved as parquet in temp loc, validating..."
   } catch { |err| $err.msg | logger "ERROR" "Failed to cast and save to parquet!"}
 }
 
 # Determine if a parquet file was saved where expected
 # This won't actually confirm if THIS file has been saved as parquet...
 # only that there is at least one parquet file there. need to improve
-def valid_parquet [url] {
+def valid_parquet [url: string] {
   let pval = ls temp_data/ | get name | find parquet
   let ptest = $pval | is-not-empty
   match $ptest {
@@ -215,18 +154,18 @@ def valid_parquet [url] {
 }
 
 # Move and rename parquet to appropriate directory in monthly silver partition
-def move_rename_parquet [url] {
+def move_rename_parquet [url: string] {
   logger "INFO" "Moving and renaming parquet"
   try {
     let year = get_year $url
     let month = get_month $url
     let index = get_identifier $url
-    mv temp_data/temp.parquet $"silver/($year)/($month)/($index).parquet"
+    mv $"temp_data/($index).parquet" $"silver/($year)/($month)/($index).parquet"
   } catch { logger "ERROR" "Transerring parquet to partitioned dir failed" }
 }
 
 # Checking if parquet can be found where it is supposed to be
-def confirm_parquet [url] {
+def confirm_parquet [url: string] {
   let year = get_year $url
   let month = get_month $url
   let index = get_identifier $url
