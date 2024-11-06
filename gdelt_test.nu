@@ -20,51 +20,49 @@
 #
 #=============================================================
 
+let TIME_START = date now
+let URL = "http://data.gdeltproject.org/gdeltv2/lastupdate.txt"
+let INDEX = get_identifier $URL
+
+# This function logs using [date]-[importance]-[message] format.
 def logger [importance message: string] {
   let date = date now | format date "%Y-%m-%d %H:%M:%S"
   let logger = $"($date) - ($importance) - ($message)\n"
   $logger | save --append gdelt.log
 }
 
-# logger "INFO" "Testing logging"
-
-let TIME_START = date now
-let URL = "http://data.gdeltproject.org/gdeltv2/lastupdate.txt"
-
 # This function extracts the unique identifier 
 # from the GDELT lastupdate .txt file. The exports file.
 def get_identifier [url: string] {
   # logger "INFO" "Starting to grab unique identifer"
   let status = http get -fe $url | get status
-  match $status {
-    200 => (# logger "INFO" "Got 200 code! Grabbing identifier" |
-           http get $url |
-           lines |
-           first |
-           split row " " |
-           last |
-           split words |
-           first 6 |
-           last)
-    3.. => (logger "WARNING " "Got a 3** status code attempting to get identifier, trying again in 1min" |
-            sleep 1min | get_identifier $url)
-    4.. => (logger "WARNING" "Got a 4** status code attempting to get identifier, trying again in 1min" |
-            sleep 1min | get_identifier $url)
-    5.. => (logger "WARNING" "Got a 5** status code attempting to get identifier, trying again in 1min" |
-            sleep 1min | get_identifier $url)  
-    _ => (logger "WARNING" "Got a weird response for a status code attempting to get identifier,
-          trying again in 1min" | sleep 1min | get_identifier $url)
-  }
+  try { http get $url |
+          lines |
+          first |
+          split row " " |
+          last |
+          split words |
+          first 6 |
+          last
+  } catch { |err| $err.msg | match $status {
+        3.. => (logger "WARNING " "Got a 3** status code attempting to get identifier, trying again in 1min" | sleep 5sec)
+        4.. => (logger "WARNING" "Got a 4** status code attempting to get identifier, trying again in 1min" | sleep 1min)
+        5.. => (logger "WARNING" "Got a 5** status code attempting to get identifier, trying again in 1min" | sleep 1min)
+        _ => (logger "WARNING" "Got a weird response for a status code attempting to get identifier, trying again in 1min" | sleep 1min)
+                }
+        }
 }
 
+print $INDEX
+
 def get_year [url: string] {
-  let index = get_identifier $url
+  let index = $INDEX
   let year = $index | into string | str substring 0..3
   return $year
 }
 
 def get_month [url: string] {
-  let index = get_identifier $url
+  let index = $INDEX
   let month = $index | into string | str substring 4..5
   return $month
 }
@@ -87,14 +85,10 @@ def get_data [url]: any -> int {
   let status = http get -fe $url | get status
   match $status {
     200 => (logger "INFO" "Got a good 200 status code!" | downloader $url)
-    3.. => (logger "WARNING" "Got a 3** status code, will try again in 1min" |
-            sleep 1min | get_data $url)
-    4.. => (logger "WARNING" "Got a 4** status code, will try again in 1min" |
-            sleep 1min | get_data $url)
-    5.. => (logger "WARNING" "Got a 5** status code, will try again in 1min" |
-            sleep 1min | get_data $url)    
-    _ => (logger "WARNING" "Got a weird http response code, will try again in 1min" |
-          sleep 1min | get_date $url)
+    3.. => (logger "WARNING" "Got a 3** status code, will try again in 1min" | sleep 1min | get_data $url)
+    4.. => (logger "WARNING" "Got a 4** status code, will try again in 1min" | sleep 1min | get_data $url)
+    5.. => (logger "WARNING" "Got a 5** status code, will try again in 1min" | sleep 1min | get_data $url)    
+    _ => (logger "WARNING" "Got a weird http response code, will try again in 1min" | sleep 1min | get_date $url)
   }
 }
 
@@ -103,7 +97,7 @@ def get_data [url]: any -> int {
 def downloader [url: string] {
   logger "INFO" "Starting download attempt..."
   try {
-    let identifier = get_identifier $url
+    let identifier = $INDEX
     let year = get_year $url
     let month = get_month $url
     http get (http get $url |
@@ -113,13 +107,12 @@ def downloader [url: string] {
     last) |
     save $"bronze/($year)/($month)/($identifier).csv.zip" -f |
     logger "INFO" "Downloading of the data seems complete!"
-    } catch { logger "WARNING" "Failed to download zipped csv, will try again in 1min" |
-      sleep 1min | downloader $url}
+    } catch { |err| $err.msg | logger "WARNING" "Failed to download zipped csv, will try again in 1min" | sleep 1min | downloader $url}
 }
 
 def unzipper [url: string] {
   logger "INFO" "Starting to try to unzip"
-  let identifier = get_identifier $url
+  let identifier = $INDEX
   let year = get_year $url
   let month = get_month $url
   unzip $"bronze/($year)/($month)/($identifier).csv.zip" -d temp_data/ |
@@ -129,9 +122,9 @@ def unzipper [url: string] {
 
 # Convert CSV to Parquet format
 # Rename columns and set data types
-def duck_parquet [url: string] {
+def duck_parquet [url] {
   logger "INFO" "Grabbing specific CSV file from temp/."
-  let index = get_identifier $url
+  let index = $INDEX
   # Find and replace previous index with current in sql file
   cat gdelt_query.sql | str replace --all --regex '[0-9]{12,16}' $index | save gdelt_query.sql -f
   try {
@@ -159,16 +152,16 @@ def move_rename_parquet [url: string] {
   try {
     let year = get_year $url
     let month = get_month $url
-    let index = get_identifier $url
+    let index = $INDEX
     mv $"temp_data/($index).parquet" $"silver/($year)/($month)/($index).parquet"
-  } catch { logger "ERROR" "Transerring parquet to partitioned dir failed" }
+  } catch { |err| $err.msg | logger "ERROR" "Transerring parquet to partitioned dir failed" }
 }
 
 # Checking if parquet can be found where it is supposed to be
 def confirm_parquet [url: string] {
   let year = get_year $url
   let month = get_month $url
-  let index = get_identifier $url
+  let index = $INDEX
   let confirm = ls $"silver/($year)/($month)" | find $"($index).parquet" | is-not-empty
   match $confirm {
     true => (logger "INFO" "Parquet file successfully saved in expected Silver dir!" |

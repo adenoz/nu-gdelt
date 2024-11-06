@@ -1,4 +1,4 @@
-COPY (SELECT * FROM read_csv('temp_data/20241031094500.export.CSV', columns={
+COPY (SELECT * FROM read_csv('temp_data/20241106074500.export.CSV', columns={
      'GlobalEventID': 'INTEGER',
      'Day': 'INTEGER',
      'MonthYear': 'INTEGER',
@@ -60,4 +60,4 @@ COPY (SELECT * FROM read_csv('temp_data/20241031094500.export.CSV', columns={
      'ActionGeo_FeatureID': 'VARCHAR',
      'DATEADDED': 'BIGINT',
      'SOURCEURL': 'VARCHAR'
-    })) TO 'temp_data/20241031094500.parquet' (FORMAT 'parquet');
+    })) TO 'temp_data/20241106074500.parquet' (FORMAT 'parquet');
