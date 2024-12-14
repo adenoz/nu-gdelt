@@ -189,3 +189,29 @@ def main [] {
   confirm_parquet $URL
   finish_up
 }
+
+def "main backfill" [year: string] {
+  let target = match $year {
+    "2024" => "/2024"
+    "2023" => "/2023 /2024"
+    _ => (print "could not parse your backfill year, please enter a year")
+  }
+  let urls = http get http://data.gdeltproject.org/gdeltv2/masterfilelist.txt | lines | find $target | split row " " | find export | first 2
+  for url in $urls {
+    bf_downloader $url
+  }
+  bf_unzipper
+}
+
+# This function saves / downloads files from a url into /bronze
+def bf_downloader [url: string] {
+  let name = $url | split words | first 6 | last
+    http get $url |
+    save $"bronze/($name).csv.zip" -f
+}
+
+def bf_unzipper [] {
+  ls bronze/*csv.zip | get name | each { |rr| unzip $rr -d temp_data/ }
+}
+
+
