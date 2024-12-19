@@ -190,29 +190,42 @@ def main [] {
   finish_up
 }
 
+#============================================================
+
 def "main backfill" [year: string] {
+  let bflist = find_list $year
+  bf_downloader $bflist
+  bf_unzipper
+  partitioner
+  clean_csv
+  print "Job complete!"
+}
+
+def find_list [bf_date: string] {
   print "Starting backfill job..."
-  let target = match $year {
+  let target = match $bf_date {
     "2024" => "/2024"
     "2023" => "/2023 /2024"
     _ => (print "could not parse your backfill year, please enter a year")
   }
-  print "Getting list of files to download..."
-  let urls = http get http://data.gdeltproject.org/gdeltv2/masterfilelist.txt | lines | find $target | split row " " | find export | first 20
-  for url in $urls {
-    print $"Downloading ($url) now..."
-    bf_downloader $url
-  }
-  bf_unzipper
-  partitioner
-  print "Job complete!"
+  print "Getting full list of gdelt files..."
+  let gdelt_list = http get http://data.gdeltproject.org/gdeltv2/masterfilelist.txt | lines | find $target | split row " " | find export # | first 20 # For testing, add `| first 20` or something
+  print "Getting list of files already on disk..."
+  let disk_list = ls bronze/ | get name | split row "/" | find --regex [0-9] | split row "." | find --regex [0-9]
+  print "Gettin diff, determing list of files to download..."
+  # THE FOLLOWING LINE DOES NOT DO WHAT IT IS MEANT TO DO FOR NOW
+  let to_dl = $gdelt_list | filter { |$item| not ($item in $disk_list) }
+  print "List of files to download compiled!"
+  return $to_dl
 }
 
 # This function saves / downloads files from a url into /bronze
-def bf_downloader [url: string] {
-  let name = $url | split words | first 6 | last
-    http get $url |
-    save $"bronze/($name).csv.zip" -f
+def bf_downloader [urls] {
+  for url in $urls {
+    print $"Downloading ($url) now..."
+    let name = $url | split words | first 6 | last
+    http get $url | save $"bronze/($name).csv.zip" -f 
+  }
 }
 
 def bf_unzipper [] {
@@ -222,7 +235,7 @@ def bf_unzipper [] {
 }
 
 def partitioner [] {
-  print "Starting to attempt to partition the CSVs into partitioned parquet files..."
+  print "Starting to attempt to process the CSVs into hive partitioned parquet files..."
   duckdb -c "COPY (SELECT *, CAST(CAST(MonthYear AS VARCHAR)[5:] AS BIGINT) AS Month FROM read_csv('temp_data/*.CSV', columns={
     'GlobalEventID': 'INTEGER',
     'Day': 'INTEGER',
@@ -287,6 +300,12 @@ def partitioner [] {
     'SOURCEURL': 'VARCHAR'
   })) TO 'silver' (FORMAT PARQUET, PARTITION_BY (Year, Month));"
   print "Partitioning is complete!"
+}
+
+def clean_csv [] {
+  print "Tidying up temporary CSV files..."
+  rm temp_data/*.CSV
+  print "Temporary CSV files deleted."
 }
 
 
